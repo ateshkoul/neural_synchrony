@@ -1,0 +1,163 @@
+%% Script description
+% This script basically reproduces the natural frequency results as well as
+% saves the stats that would be used by the
+% EEG_prestim_regression_all_channels_time_freq_hilbert.m script.
+
+% You have to run this first.
+
+
+% Atesh Koul 25-08-2020
+% -------------------------------------
+%%
+startup_IBS()
+
+
+%%
+disp('starting analysis natural frequencies')
+comp_name = getenv('computername');
+
+switch comp_name
+    case 'IITLW4178'
+        work_dir = 'C:\Users\AKoul\OneDrive - Fondazione Istituto Italiano Tecnologia\Research projects 2020\EEG_prestimulus\Resources\Giac2Atesh\';
+        chloc = load(['C:\Users\AKoul\Downloads\Natural-Frequencies\recordings\chanloc.mat'],'chanloc');
+        username = 'AKoul';
+    case 'DESKTOP-ALIEN'
+        username = 'Atesh';
+        work_dir = 'C:\Users\Atesh\OneDrive - Fondazione Istituto Italiano Tecnologia\Research projects 2020\EEG_prestimulus\Resources\Giac2Atesh\';
+        chloc = load(['C:\Users\Atesh\Downloads\Natural-Frequencies\recordings\chanloc.mat'],'chanloc');
+end
+addpath(genpath(['C:\Users\' username '\Downloads\Natural-Frequencies\analyses']));
+%%
+%
+
+% Low Beta Waves (12.5–16 Hz, "Beta 1 power");
+% Beta Waves (16.5–20 Hz, "Beta 2 power"); and
+% High Beta Waves (20.5–28 Hz, "Beta 3 power")
+% Beta 1 (12.5–16 Hz), Beta 2 (16.5–20 Hz), and Beta 3 (20.5–28 Hz) bands
+% https://www.biologicalpsychiatryjournal.com/article/S0006-3223(02)01362-8/fulltext
+
+
+%% stats
+% work_dir = 'C:\Users\Atesh\OneDrive - Fondazione Istituto Italiano Tecnologia\Research projects 2020\EEG_prestimulus\Resources\Giac2Atesh\';
+
+clearvars -except work_dir username;
+
+
+
+% Template_dir = ['C:\Users\' username '\Downloads\Natural-Frequencies\analyses\Natural-Frequencies - Figures\Codes_PermClust'];
+
+Template_dir ='C:\Users\Atesh\OneDrive - Fondazione Istituto Italiano Tecnologia\Research projects 2020\Inter-brain synchrony\Libraries\IBS_matlab';
+% dataset_names = {'moulan', 'meng' ,'all'};
+% dataset_names = {'moulan'};
+dataset_names = {'all'};
+% dataset_names = {'all_same_side'};
+% dataset_names = {'all','all_same_side'};
+
+%%
+
+% band_ranges = get_band_ranges('continuous');
+
+band_ranges = get_band_ranges('canonical extended');
+
+% start_times(:,1) = -2:0.1:-0.6;
+% start_times(:,2) = -1.5:0.1:-0.1;
+% 
+% start_times_array = mat2cell(start_times,ones(1,15),[2 0]);
+% 
+% pre_stim_time_s = transpose(start_times_array(:,1));
+
+stim_time_s = {[3 6],[6 8],[8 10],[10 12]};
+
+% pre_stim_time_s = {[-0.5 0.05]};
+% pre_stim_time_s = {[-4.5 -0.5]};
+% pre_stim_time_s = {[-1.5 -0.5]};
+% chanloc = 'chloc_biosemi64.locs'; % old
+% chanloc = 'BioSemi64.loc';
+chloc = load('chanloc_biosemi64.mat','chanloc');
+chanloc = chloc.chanloc;
+for dataset = 1:numel(dataset_names)
+    dataset_name = dataset_names{dataset};
+    
+    
+    
+    [pwrAve,pwrAveTst,pwrAveStat] = IBS_generate_natural_freq_taskwise(stim_time_s,band_ranges,dataset_name);
+%     [pwrAve,pwrAveTst,pwrAveStat] = IBS_generate_natural_freq(stim_time_s,band_ranges,dataset_name);
+
+    % plot_natural_freq_results(pwrAve,chanloc,band_ranges,pre_stim_time_s)
+    pwrAve_merged = cat(1,pwrAve{:});
+    pwrAve_Tst_merged = cat(1,pwrAveTst{:});
+%     [stat] = cellfun(@(x,y) IBS_natural_freq_stats(x,y,band_ranges,...
+%         Template_dir),pwrAve_Tst_merged,stim_time_s,'UniformOutput',false);
+
+    pwrAve_stat = arrayfun(@(x) IBS_natural_freq_stats(pwrAve_Tst_merged(:,x)',stim_time_s,band_ranges,Template_dir),...
+        1:6,'UniformOutput', false);
+    
+    arrayfun(@(x) plot_natural_freq_results(pwrAve_merged(:,x)',chanloc,pwrAve_stat{1,x},band_ranges,stim_time_s),...
+        1:6)
+  
+    
+    
+%     plot_natural_freq_results(pwrAve,chanloc,stat,band_ranges,stim_time_s)
+    
+    
+    
+    if numel(stim_time_s) <10        
+        pre_stim_id     = cell_2_name(stim_time_s);
+    else
+        pre_stim_id = ['moving_win_' num2str(stim_time_s{1}(1,1)) num2str(stim_time_s{end}(1,1))];
+    end
+ 
+    
+    if numel(band_ranges) <10
+        band_id     = cell_2_name(band_ranges);
+    else
+        band_id = ['all_bands_' num2str(band_ranges{1}(1,1)) '-' num2str(band_ranges{end}(1,1))];
+    end
+    
+    saveas(gcf,[work_dir 'results\Images\Natural freq\' dataset_name '_stats_dataset_5_' pre_stim_id band_id '.tif']);
+    save([work_dir 'results\mat\Natural freq\' dataset_name '_stats_dataset_5_' pre_stim_id band_id '.mat'],...
+        'pwrAve','pwrAveTst','pwrAveStat','stat','band_ranges','pre_stim_time_s','dataset_name');
+    close all
+end
+
+clc
+disp('done')
+%% plot
+% significant
+
+% band_ranges = get_band_ranges('continuous');
+band_ranges = get_band_ranges('canonical extended');
+% cnt=1;
+% for k=0:1:33
+%     band_ranges{cnt} = [k k+2];
+%     cnt = cnt + 1;
+% end
+% band_ranges = {[1 3], [4 7], [8 12], [9 11], [13 16], [17 20],[21 28], [31 45]};
+
+
+% pre_stim_time_s = {[-4.5 -0.5]};
+stim_time_s = {[-4.5 -3.5],[-3.5 -2.5], [-2.5 -1.5], [-1.5 -0.5]};
+
+
+dat_mask_alpha = [1 0.01];
+for dataset = 1:numel(dataset_names)
+    dataset_name = dataset_names{dataset};
+    pre_stim_id = cell_2_name(stim_time_s);
+    
+    if numel(band_ranges) <10
+        band_id     = cell_2_name(band_ranges);
+    else
+        band_id = ['all_bands_' num2str(band_ranges{1}(1,1)) '-' num2str(band_ranges{end}(1,1))];
+    end
+    
+    load([work_dir 'results\mat\Natural freq\' dataset_name '_stats_dataset_5_' pre_stim_id band_id '.mat'],'pwrAve','pwrAveTst','pwrAveStat','stat');
+    
+    plot_natural_freq_results(pwrAve,chanloc,stat,band_ranges,stim_time_s)
+    
+    saveas(gcf,[work_dir 'results\Images\Natural freq\' dataset_name ...
+        '_stats_dataset_5_' pre_stim_id band_id '_' cell_2_name({dat_mask_alpha}) '.tif']);
+    close all
+end
+
+
+

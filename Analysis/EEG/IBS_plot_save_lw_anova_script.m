@@ -1,0 +1,2 @@
+analysis_type = {'no_aggressive_trialwise_CAR','aggressive_trialwise_CAR','no_aggressive_CAR_ASR_5_ICA_appended_trials','no_aggressive_CAR_ASR_10_ICA_appended_trials'};%,'aggressive_trialwise_CAR'};
+cellfun(@(x) IBS_plot_save_lw_anova(x),analysis_type,'UniformOutput',false)
